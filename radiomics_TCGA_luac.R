@@ -17,11 +17,24 @@ download.file(url_MAF, './mutation.maf', "auto", quiet = FALSE, mode = "w",
               extra = getOption("download.file.extra"))
 
 untar('RPPA.tar.gz', exdir = '.')
+untar('gdac.broadinstitute.org_LUAD.Clinical_Pick_Tier1.Level_4.2015082100.1.0.tar.gz',
+      exdir = '.')
+untar('clinical_TCGA_portal.tar', exdir = '.')
+untar('clinical_17_sample.tar', exdir = './clinical_sample')
+
 
 
 ########### Assign Radiomics data ####################################################
 CT <- read.delim('TCGA_result_romove_second_mass.txt')
+## Select larger mass if CT shows two masses #
+CT$ID <- gsub('_done', '',CT$Original.Num)
 PET <- read.delim('TCGA_result_PET.txt')
+PET$ID <- gsub('_done', '',PET$Original.Num)
 
+########### Assign TCGA data ###########################################
 
+clinical <- read.delim('./clinical_TCGA_portal/nationwidechildrens.org_clinical_patient_luad.txt') 
+summary(clinical)
 
+data_ct <- merge(clinical, CT, by.x = 'bcr_patient_barcode', by.y = 'ID', all.y = TRUE)
+summary(data_ct)
