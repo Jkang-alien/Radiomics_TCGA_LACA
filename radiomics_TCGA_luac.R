@@ -36,7 +36,7 @@ PET$ID <- gsub('_done', '',PET$Original.Num)
 
 ########### Assign TCGA data ###########################################
 
-mutation <- read.delim('./mutation/broad.mit.edu__Illumina_Genome_Analyzer_DNA_Sequencing_level2.maf')
+mutation <- read.delim('./broad.mit.edu__Illumina_Genome_Analyzer_DNA_Sequencing_level2.maf')
 duplicated(gsub('-...-...-....-..', '', unique(mutation$Tumor_Sample_Barcode)))
 
 mutation_ID <- gsub('-...-...-....-..', '', mutation$Tumor_Sample_Barcode)
@@ -51,7 +51,7 @@ dataCT$TP53 <- dataCT$ID %in% data_mut$TP53
 dataCT$KRAS <- dataCT$ID %in% data_mut$KRAS
 
 
-clinical <- read.delim('./clinical_TCGA_portal/nationwidechildrens.org_clinical_patient_luad.txt') 
+clinical <- read.delim('./nationwidechildrens.org_clinical_patient_luad.txt') 
 summary(clinical)
 
 data_ct <- merge(clinical, CT, by.x = 'bcr_patient_barcode', by.y = 'ID', all.y = TRUE)
@@ -59,7 +59,7 @@ summary(data_ct)
 
 con <- file('mutation.maf')
 readLines(con, n=4)
-mutation <- read.delim('./mutation/broad.mit.edu__Illumina_Genome_Analyzer_DNA_Sequencing_level2.maf')
+mutation <- read.delim('.broad.mit.edu__Illumina_Genome_Analyzer_DNA_Sequencing_level2.maf')
 
 
 mutation_ID <- read.delim('./gdac.broadinstitute.org_LUAD.Mutation_Packager_Calls.Level_3.2015082100.0.0/MANIFEST.txt',sep = ' ')[,2]
@@ -69,18 +69,75 @@ read.delim('./gdac.broadinstitute.org_LUAD.Mutation_Packager_Calls.Level_3.20150
 sum(CT$ID %in% mutation_ID)
 sum(CT$ID %in% clinical$bcr_patient_barcode)
 
-fusion <- read.csv('tcga.luad.fusions.20121029.csv')
+fusion <- read.csv('translocation.csv')
+
+dataCT$ID[(dataCT$ID %in% gsub('-01A', '', fusion$ID))]
+fusion[fusion$ID == 'TCGA-50-8460-01A',]
+
+dataCT$fusion <- rep('absence', dim(dataCT)[1])
+dataCT$fusion [dataCT$ID == 'TCGA-50-8460'] <- 'EML4_ALK'
 
 ########### CT data #######################################
 library(gplots)
 heatmap(scale(as.matrix(CT[,4:164]),center = TRUE, scale = TRUE))
 
+library(ConsensusClusterPlus)
+d <- as.matrix(CT[,4:164])
+
+d = sweep(d,1, apply(d,1,median,na.rm=T))
+d = d[complete.cases(d),]
+
+
+results = ConsensusClusterPlus(d,maxK=4,reps=5000,pItem=0.8,pFeature=1,
+                              title='exercise',clusterAlg="hc",
+                              innerLinkage="complete", finalLinkage="complete",
+                              distance="pearson",
+                              #seed=1262118388.71279,
+                              plot="png")
 
 library(NMF)
-hc = hclust(dist(data_hc_s), 'complete')
+
+ann <- data.frame(EGFR = factor(dataCT$EGFR)[complete.cases(as.matrix(CT[,4:164]))],
+                  TP53 = factor(dataCT$TP53)[complete.cases(as.matrix(CT[,4:164]))],
+                  KRAS = factor(dataCT$KRAS)[complete.cases(as.matrix(CT[,4:164]))],
+                  Fusion = factor(dataCT$fusion)[complete.cases(as.matrix(CT[,4:164]))])
+
+ann_colors <- list(Subtype_h = c('yellow', 'blue'),
+                   cluster = c('chartreuse', 'gold', 'cyan'),
+                   Subtype_m = c('lightblue', 'orange', 'purple', 'green'))
+
+ah<- aheatmap(d,#[,(apply(d, 2, max) < 100) & (apply(d, 2, min) > -100)], 
+              distfun = "pearson",
+              hclustfun = "complete",
+              #Colv = colv,
+              annRow = ann,
+              #annCol = ann_col,
+              #annColors = ann_colors_e,
+              #cex = 2,
+              #labRow = rep('',dim(data_hc_e)[1]),
+              #labCol = rep('',dim(data_hc_e)[2])
+              #fontsize = 12,
+              #cexCol = ,
+              #fontsize = 16,
+              #labCol = rep('',dim(data_hc_e)[2]),
+              #Colv = colv
+              #reorderfun = function(d, w) reorder(d, 10)
+)
+
+apply(d, 2, max) < 1000
+
+results[[2]][["consensusMatrix"]][1:5,1:5]
+results[[2]][["consensusTree"]]
+results[[2]][["consensusClass"]][1:5]
+
+icl = calcICL(results,title='exercise',plot="png")
+icl[["clusterConsensus"]]
+
+library(NMF)
+hc = hclust(dist(as.matrix(CT[,4:164])), 'complete')
 
 
-memb_3 <- factor(cutree(hc, k = 3), levels = 1:3,
+memb_3 <- factor(cutree(hc, k = 4), levels = 1:3,
                  labels = c('A', 'B', 'C'))
 
 data_serous$group <- memb_3
@@ -110,14 +167,15 @@ layout(matrix(c(1,1,2,2), ncol = 2, byrow = TRUE),
 
 ann <- data.frame(EGFR = factor(dataCT$EGFR),
                   TP53 = factor(dataCT$TP53),
-                  KRAS = factor(dataCT$KRAS))
+                  KRAS = factor(dataCT$KRAS),
+                  Fusion = factor(dataCT$fusion))
 
 ann_colors <- list(Subtype_h = c('yellow', 'blue'),
                      cluster = c('chartreuse', 'gold', 'cyan'),
                      Subtype_m = c('lightblue', 'orange', 'purple', 'green'))
 
 ah<- aheatmap(scale(as.matrix(dataCT[,4:164]),center = TRUE, scale = TRUE), 
-              hclustfun=function(d) hclust(d, method="average"),
+              hclustfun=function(d) hclust(d, method="centroid"),
               #Colv = colv,
               annRow = ann,
               #annCol = ann_col,
@@ -133,4 +191,38 @@ ah<- aheatmap(scale(as.matrix(dataCT[,4:164]),center = TRUE, scale = TRUE),
               #reorderfun = function(d, w) reorder(d, 10)
 )
 
+p_value_KRAS <- c()
 
+for (i in 4:164) {
+  a <- wilcox.test(dataCT[,i] ~ dataCT$KRAS)
+  p_value_KRAS <- append(p_value_KRAS, a$p.value)
+}
+
+t.test()
+p_value_KRAS <0.01
+colnames(dataCT)[17]
+
+hist(log(dataCT$Energy_val))
+boxplot(Energy_val ~ KRAS, dataCT)
+
+p_value_EGFR <- c()
+
+for (i in 4:164) {
+  a <- wilcox.test(dataCT[,i] ~ dataCT$EGFR)
+  p_value_EGFR <- append(p_value_EGFR, a$p.value)
+}
+
+sum(p_value_EGFR <0.01)
+
+p_value_TP53 <- c()
+for (i in 4:164) {
+  a <- wilcox.test(dataCT[,i] ~ dataCT$TP53)
+  p_value_TP53 <- append(p_value_TP53, a$p.value)
+}
+
+sum(p_value_TP53 <0.01)
+
+par(mfrow = c(4,4))
+for (i in 4:19) {
+  hist(dataCT[,i])
+}
