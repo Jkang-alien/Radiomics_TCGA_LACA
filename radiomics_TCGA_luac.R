@@ -93,7 +93,8 @@ CairoPDF(file = './heatmaps/ward.pdf',
 ah<- aheatmap(d, 
               distfun = "euclidean",
               hclustfun = "ward",
-              annRow = ann)
+              annRow = ann,
+              Colv = results[[3]]$consensusTree)
 dev.off()
 
 CairoPDF(file = './heatmaps/average.pdf',
@@ -142,6 +143,25 @@ colnames(d)[ct_4 == 3]
 colnames(d)[ct_4 == 4]
 
 
+table(ct_4 ==1, ann$EGFR)
+fisher.test(ct_4 ==1, ann$EGFR)
+
+
+############################################
+########## consensusclusterplus#############
+
+library(ConsensusClusterPlus)
+
+results = ConsensusClusterPlus(d,maxK=6,reps=5000,pItem=0.8,pFeature=1,
+                               title='consensus',
+                               clusterAlg="hc",
+                               innerLinkage = "ward.D2",
+                               finalLinkage = "ward.D2",
+                               distance="euclidean",
+                               plot="png")
+
+results[[3]]$consensusClass
+
 #######################################
 ### How clustering in test.set ?#########
 
@@ -152,6 +172,7 @@ for (i in 5:165) {
   a <- wilcox.test(dataCT[,i] ~ dataCT$KRAS)
   p_value_KRAS <- append(p_value_KRAS, a$p.value)
 }
+
 
 t.test()
 p_value_KRAS <0.01
