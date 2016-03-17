@@ -57,6 +57,8 @@ d <- scale(d, center = TRUE, scale = TRUE)
 d <- sweep(d, 1, apply(d, 1, median, na.rm = TRUE))
 d <- d[complete.cases(d),]
 
+data_rm_NA <- dataCT[complete.cases(dataCT[,5:164]),] 
+
 ann <- data.frame(EGFR = factor(dataCT$EGFR)[complete.cases(dataCT[,5:165])],
                   TP53 = factor(dataCT$TP53)[complete.cases(dataCT[,5:165])],
                   KRAS = factor(dataCT$KRAS)[complete.cases(dataCT[,5:165])],
@@ -164,6 +166,32 @@ results[[3]]$consensusClass
 
 #######################################
 ### How clustering in test.set ?#########
+### Rand statistic #####################
+
+
+
+
+
+##### AUC ##############################
+library(pROC)
+
+auc_EGFR <- c()
+for (i in 5:165){
+  a <- auc(data_rm_NA$EGFR, data_rm_NA[,i])
+  auc_EGFR <- rbind(auc_EGFR, a)
+}
+
+auc_EGFR <- c()
+for (i in 5:165){
+  a <- auc(data_rm_NA$EGFR, data_rm_NA[,i])
+  auc_EGFR <- rbind(auc_EGFR, a)
+}
+
+auc_EGFR <- c()
+for (i in 5:165){
+  a <- auc(data_rm_NA$EGFR, data_rm_NA[,i])
+  auc_EGFR <- rbind(auc_EGFR, a)
+}
 
 
 p_value_KRAS <- c()
