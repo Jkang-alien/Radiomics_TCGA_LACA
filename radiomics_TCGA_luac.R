@@ -1,3 +1,6 @@
+library(NMF)
+library(ConsensusClusterPlus)
+library(Cairo)
 
 ########### Assign Radiomics data ####################################################
 CT <- read.delim('TCGA_result_romove_second_mass.txt')
@@ -52,12 +55,30 @@ dataCT <- merge(dataCT, exp_subtype, by.x = 'ID', by.y = 'sampleId', all.x = TRU
 
 library(NMF)
 
-d <- as.matrix(dataCT[,5:164])
+d <- as.matrix(dataCT[,5:165])
 d <- scale(d, center = TRUE, scale = TRUE)
 d <- sweep(d, 1, apply(d, 1, median, na.rm = TRUE))
 d <- d[complete.cases(d),]
 
-data_rm_NA <- dataCT[complete.cases(dataCT[,5:164]),] 
+
+############################################
+########## consensusclusterplus#############
+
+library(ConsensusClusterPlus)
+
+results = ConsensusClusterPlus(d,maxK=10,reps=5000,pItem=0.8,pFeature=1,
+                               title='consensus',
+                               clusterAlg="hc",
+                               innerLinkage = "ward.D2",
+                               finalLinkage = "ward.D2",
+                               distance="euclidean",
+                               plot="pdf")
+
+results[[4]]$consensusClass
+
+
+
+data_rm_NA <- dataCT[complete.cases(dataCT[,5:165]),] 
 
 ann <- data.frame(EGFR = factor(dataCT$EGFR)[complete.cases(dataCT[,5:165])],
                   TP53 = factor(dataCT$TP53)[complete.cases(dataCT[,5:165])],
@@ -70,6 +91,7 @@ ann <- data.frame(EGFR = factor(dataCT$EGFR)[complete.cases(dataCT[,5:165])],
 
 
 library(Cairo)
+color <- colorRampPalette(brewer.pal(9,'Blues'))(100)
 
 CairoPDF(file = './heatmaps/mcquitty.pdf',
          width =7.5, height = 7.5, pointsize = 16)
@@ -94,9 +116,10 @@ CairoPDF(file = './heatmaps/ward.pdf',
 
 ah<- aheatmap(d, 
               distfun = "euclidean",
+              color = color,
               hclustfun = "ward",
               annRow = ann,
-              Colv = results[[3]]$consensusTree)
+              Colv = results[[4]]$consensusTree)
 dev.off()
 
 CairoPDF(file = './heatmaps/average.pdf',
@@ -148,22 +171,6 @@ colnames(d)[ct_4 == 4]
 table(ct_4 ==1, ann$EGFR)
 fisher.test(ct_4 ==1, ann$EGFR)
 
-
-############################################
-########## consensusclusterplus#############
-
-library(ConsensusClusterPlus)
-
-results = ConsensusClusterPlus(d,maxK=6,reps=5000,pItem=0.8,pFeature=1,
-                               title='consensus',
-                               clusterAlg="hc",
-                               innerLinkage = "ward.D2",
-                               finalLinkage = "ward.D2",
-                               distance="euclidean",
-                               plot="png")
-
-results[[3]]$consensusClass
-
 #######################################
 ### How clustering in test.set ?#########
 ### Rand statistic #####################
@@ -177,22 +184,57 @@ library(pROC)
 
 auc_EGFR <- c()
 for (i in 5:165){
-  a <- auc(data_rm_NA$EGFR, data_rm_NA[,i])
-  auc_EGFR <- rbind(auc_EGFR, a)
+  a <- roc( data_rm_NA$EGFR, data_rm_NA[,i],
+       direction="auto", auc=TRUE)
+  
+      auc_EGFR <- rbind(auc_EGFR, 0.5 + abs(a$auc-0.5))
 }
 
-auc_EGFR <- c()
+
+auc_TP53 <- c()
 for (i in 5:165){
-  a <- auc(data_rm_NA$EGFR, data_rm_NA[,i])
-  auc_EGFR <- rbind(auc_EGFR, a)
+  a <- auc(data_rm_NA$TP53, data_rm_NA[,i])
+  auc_TP53 <- rbind(auc_TP53, 0.5 + abs(a -0.5))
 }
 
-auc_EGFR <- c()
+auc_KRAS <- c()
 for (i in 5:165){
-  a <- auc(data_rm_NA$EGFR, data_rm_NA[,i])
-  auc_EGFR <- rbind(auc_EGFR, a)
+  a <- auc(data_rm_NA$KRAS, data_rm_NA[,i])
+  auc_KRAS <- rbind(auc_KRAS, 0.5 + abs(a -0.5))
 }
 
+auc_data <- t(cbind(auc_EGFR, auc_TP53, auc_KRAS))
+
+
+CairoPDF(file = 'auc.pdf',
+         width =7.5, height = 7.5, pointsize = 16)
+aheatmap(auc_data,
+         color = color,
+         Rowv = FALSE,
+         Colv = results[[4]]$consensusTree)
+
+dev.off()
+
+
+####### K =5 ############################
+CairoPDF(file = './heatmaps/ward_k5.pdf',
+         width =7.5, height = 7.5, pointsize = 16)
+
+ah<- aheatmap(d, 
+              distfun = "euclidean",
+              color = color,
+              hclustfun = "ward",
+              annRow = ann,
+              Colv = results[[5]]$consensusTree)
+dev.off()
+CairoPDF(file = 'auc_k5.pdf',
+         width =7.5, height = 7.5, pointsize = 16)
+aheatmap(auc_data,
+         color = color,
+         Rowv = FALSE,
+         Colv = results[[5]]$consensusTree)
+
+dev.off()
 
 p_value_KRAS <- c()
 
