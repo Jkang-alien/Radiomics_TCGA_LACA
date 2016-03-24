@@ -1,6 +1,7 @@
 library(NMF)
 library(ConsensusClusterPlus)
 library(Cairo)
+library(Biocomb)
 
 ########### Assign Radiomics data ####################################################
 CT <- read.delim('TCGA_result_romove_second_mass.txt')
@@ -76,7 +77,11 @@ results = ConsensusClusterPlus(d,maxK=10,reps=5000,pItem=0.8,pFeature=1,
 
 results[[4]]$consensusClass
 
+icl = calcICL(results,title='consensus',plot="png")
 
+icl[["clusterConsensus"]]
+
+icl[["itemConsensus"]][1:500,]
 
 data_rm_NA <- dataCT[complete.cases(dataCT[,5:165]),] 
 
@@ -111,7 +116,7 @@ ah<- aheatmap(d,
               annRow = ann)
 dev.off()
 
-CairoPDF(file = './heatmaps/ward.pdf',
+CairoPDF(file = './heatmaps/ward_euclidean.pdf',
          width =7.5, height = 7.5, pointsize = 16)
 
 ah<- aheatmap(d, 
@@ -119,7 +124,7 @@ ah<- aheatmap(d,
               color = color,
               hclustfun = "ward",
               annRow = ann,
-              Colv = results[[4]]$consensusTree)
+              Colv = results[[5]]$consensusTree)
 dev.off()
 
 CairoPDF(file = './heatmaps/average.pdf',
@@ -210,10 +215,12 @@ CairoPDF(file = 'auc.pdf',
          width =7.5, height = 7.5, pointsize = 16)
 aheatmap(auc_data,
          color = color,
-         Rowv = FALSE,
+         Rowv = NA,
          Colv = results[[4]]$consensusTree)
 
 dev.off()
+
+
 
 
 ####### K =5 ############################
@@ -231,10 +238,66 @@ CairoPDF(file = 'auc_k5.pdf',
          width =7.5, height = 7.5, pointsize = 16)
 aheatmap(auc_data,
          color = color,
-         Rowv = FALSE,
+         Rowv = NA,
          Colv = results[[5]]$consensusTree)
 
 dev.off()
+
+
+tapply(auc_data[1,], results[[5]]$consensusClass, mean)
+tapply(auc_data[2,], results[[5]]$consensusClass, mean)
+tapply(auc_data[3,], results[[5]]$consensusClass, mean)
+
+tapply(auc_data[1,], results[[5]]$consensusClass, sd)
+tapply(auc_data[2,], results[[5]]$consensusClass, sd)
+tapply(auc_data[3,], results[[5]]$consensusClass, sd)
+
+################# AUC significance ####################
+########### http://www.inside-r.org/node/322637 #########
+
+compute.auc.permutation(auc_data[1,],results[[5]]$consensusClass,repetitions=1000)
+
+# example
+data(data_test)
+
+# class label must be factor
+data_test[,ncol(data_test)]<-as.factor(data_test[,ncol(data_test)])
+
+auc.val=compute.aucs(dattable=data_test)
+vauc<-auc.val[,"AUC"]
+rep.num<-20
+
+p.values=compute.auc.permutation(aucs=vauc,dattable=data_test,rep.num)
+
+######################################################
+######### Pairwise correlation for medoids############
+
+cor_table_cluster_1 <- cor(d[,results[[5]]$consensusClass == 1])
+mean_pairwise_cor_1 <- apply(cor_table_cluster_1, 1, mean)
+medoid_1 <- colnames(d[,results[[5]]$consensusClass == 1])[mean_pairwise_cor == max(mean_pairwise_cor)]
+
+cor_table_cluster_2 <- cor(d[,results[[5]]$consensusClass == 2])
+mean_pairwise_cor_2 <- apply(cor_table_cluster_2, 1, mean)
+medoid_2 <- colnames(d[,results[[5]]$consensusClass == 2])[mean_pairwise_cor == max(mean_pairwise_cor)]
+
+cor_table_cluster_3 <- cor(d[,results[[5]]$consensusClass == 3])
+mean_pairwise_cor_3 <- apply(cor_table_cluster_3, 1, mean)
+medoid_3 <- colnames(d[,results[[5]]$consensusClass == 3])[mean_pairwise_cor == max(mean_pairwise_cor)]
+
+cor_table_cluster_4 <- cor(d[,results[[5]]$consensusClass == 4])
+mean_pairwise_cor_4 <- apply(cor_table_cluster_4, 1, mean)
+medoid_4 <- colnames(d[,results[[5]]$consensusClass == 4])[mean_pairwise_cor == max(mean_pairwise_cor)]
+
+cor_table_cluster_5 <- cor(d[,results[[5]]$consensusClass == 5])
+mean_pairwise_cor_5 <- apply(cor_table_cluster_5, 1, mean)
+medoid_5 <- colnames(d[,results[[5]]$consensusClass == 5])[mean_pairwise_cor == max(mean_pairwise_cor)]
+
+
+
+
+
+###################################################
+########### Wilcox test ###########################
 
 p_value_KRAS <- c()
 
