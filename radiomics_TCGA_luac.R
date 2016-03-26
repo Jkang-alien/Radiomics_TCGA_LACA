@@ -254,7 +254,7 @@ tapply(auc_data[3,], results[[5]]$consensusClass, sd)
 
 ################# AUC significance ####################
 ########### http://www.inside-r.org/node/322637 #########
-
+ 
 compute.auc.permutation(auc_data[1,],results[[5]]$consensusClass,repetitions=1000)
 
 # example
