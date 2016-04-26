@@ -4,6 +4,7 @@ library(Cairo)
 library(Biocomb)
 library(pROC)
 
+setwd('/home/jun/Radiomics_TCGA_LACA/')
 ########### Assign Radiomics data ####################################################
 CT <- read.delim('TCGA_result_romove_second_mass.txt')
 ## Select larger mass if CT shows two masses #
@@ -90,7 +91,7 @@ d <- d[complete.cases(d),]
 
 library(ConsensusClusterPlus)
 
-results = ConsensusClusterPlus(d,maxK=10,reps=5000,pItem=0.8,pFeature=1,
+results = ConsensusClusterPlus(d,maxK=6,reps=5000,pItem=0.8,pFeature=1,
                                title='consensus',
                                clusterAlg="hc",
                                innerLinkage = "ward.D2",
@@ -98,7 +99,7 @@ results = ConsensusClusterPlus(d,maxK=10,reps=5000,pItem=0.8,pFeature=1,
                                distance="euclidean",
                                plot="pdf")
 
-results[[4]]$consensusClass
+results[[5]]$consensusClass
 
 icl = calcICL(results,title='consensus',plot="png")
 
