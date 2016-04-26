@@ -102,7 +102,8 @@ results = ConsensusClusterPlus(d,maxK=6,reps=5000,pItem=0.8,pFeature=1,
                                distance="euclidean",
                                plot="pdf")
 
-results[[5]]$consensusClass
+labels_TCGA <- results[[5]]$consensusClass
+#save (labels_TCGA, file = '/home/jun/Radiomics_TCGA_LACA/CS/labels_TCGA.RData')
 
 icl = calcICL(results,title='consensus',plot="png")
 
