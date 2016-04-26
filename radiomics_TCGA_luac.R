@@ -81,6 +81,9 @@ dataCT <- merge(dataCT, exp_subtype, by.x = 'ID', by.y = 'sampleId', all.x = TRU
 library(NMF)
 
 d <- as.matrix(dataCT[,5:165])
+
+############# remove CT variable having NA in more than 5 case
+d <- d[,colSums(is.na(d)) < 5]
 d <- scale(d, center = TRUE, scale = TRUE)
 d <- sweep(d, 1, apply(d, 1, median, na.rm = TRUE))
 d <- d[complete.cases(d),]
